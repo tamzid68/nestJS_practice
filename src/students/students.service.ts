@@ -37,16 +37,33 @@ export class StudentsService {
   }
 
   async findAll(query?: PaginationQueryDto): Promise<PaginatedResponseDto<StudentEntity>> {
-    const page = query?.page && query.page > 0 ? Math.floor(query.page) : 1;
-    const limit = query?.limit && query.limit > 0 ? Math.floor(query.limit) : 10;
+    const DEFAULT_PAGE = 1;
+    const DEFAULT_LIMIT = 10;
+    const MAX_LIMIT = 100;
+
+    // Defensive normalization — service should be resilient even if controller misses validation
+    const rawPage = query?.page ?? DEFAULT_PAGE;
+    const rawLimit = query?.limit ?? DEFAULT_LIMIT;
+
+    let page = Number(rawPage);
+    let limit = Number(rawLimit);
+
+    if (!Number.isFinite(page) || page < 1) page = DEFAULT_PAGE;
+    else page = Math.floor(page);
+
+    if (!Number.isFinite(limit) || limit < 1) limit = DEFAULT_LIMIT;
+    else {
+      limit = Math.floor(limit);
+      if (limit > MAX_LIMIT) limit = MAX_LIMIT;
+    }
+
     const offset = (page - 1) * limit;
 
     try {
-      const [data, totalItems] = await this.repo.findAndCount({
-        order: { createdAt: 'ASC' as const },
-        skip: offset,
-        take: limit,
-      });
+      // Use query builder — easier to extend with filters/sorting later and avoids loading relations unintentionally
+      const qb = this.repo.createQueryBuilder('student').orderBy('student.createdAt', 'ASC').skip(offset).take(limit);
+
+      const [data, totalItems] = await qb.getManyAndCount();
 
       const totalPages = Math.max(1, Math.ceil(totalItems / limit));
 
