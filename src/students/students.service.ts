@@ -45,7 +45,7 @@ export class StudentsService {
     const rawPage = query?.page ?? DEFAULT_PAGE;
     const rawLimit = query?.limit ?? DEFAULT_LIMIT;
 
-    let page = Number(rawPage);
+    let page = Number(rawPage); 
     let limit = Number(rawLimit);
 
     if (!Number.isFinite(page) || page < 1) page = DEFAULT_PAGE;
